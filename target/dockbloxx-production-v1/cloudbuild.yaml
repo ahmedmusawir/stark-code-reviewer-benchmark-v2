@@ -1,0 +1,76 @@
+substitutions:
+  _REGION: "us-east1"
+  _SERVICE_NAME: "dockbloxx-prod-staging"
+  _NEXT_PUBLIC_APP_URL: "https://pending-initial-deploy"
+  _NEXT_PUBLIC_BACKEND_URL: "https://dockbloxx.mystagingwebsite.com"
+  _NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "pk_test_REPLACE_ME"
+  # ^ Update these defaults in deploy.sh, not here.
+
+steps:
+  # 1. Build Docker Image (Injecting Build-Time Secrets)
+  - name: "gcr.io/cloud-builders/docker"
+    entrypoint: "bash"
+    id: "Build Image"
+    secretEnv:
+      - "WOOCOM_CONSUMER_KEY"
+      - "WOOCOM_CONSUMER_SECRET"
+      - "STRIPE_SECRET_KEY"
+    args:
+      - "-c"
+      - |
+        docker build \
+          --build-arg WOOCOM_CONSUMER_KEY="$$WOOCOM_CONSUMER_KEY" \
+          --build-arg WOOCOM_CONSUMER_SECRET="$$WOOCOM_CONSUMER_SECRET" \
+          --build-arg STRIPE_SECRET_KEY="$$STRIPE_SECRET_KEY" \
+          --build-arg NEXT_PUBLIC_APP_URL="${_NEXT_PUBLIC_APP_URL}" \
+          --build-arg NEXT_PUBLIC_BACKEND_URL="${_NEXT_PUBLIC_BACKEND_URL}" \
+          --build-arg NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="${_NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}" \
+          -t "us-east1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}:latest" \
+          .
+
+  # 2. Push Image to Artifact Registry
+  - name: "gcr.io/cloud-builders/docker"
+    id: "Push Image"
+    args:
+      [
+        "push",
+        "us-east1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}:latest",
+      ]
+
+  # 3. Deploy to Cloud Run (Injecting Runtime Secrets)
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: "gcloud"
+    id: "Deploy to Cloud Run"
+    args:
+      [
+        "run",
+        "deploy",
+        "${_SERVICE_NAME}",
+        "--image",
+        "us-east1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}:latest",
+        "--region",
+        "${_REGION}",
+        "--platform",
+        "managed",
+        "--allow-unauthenticated",
+        "--service-account",
+        "sa-dockbloxx-prod-staging-runt@$PROJECT_ID.iam.gserviceaccount.com",
+        "--set-secrets",
+        "WOOCOM_CONSUMER_KEY=WOOCOM_CONSUMER_KEY:latest,WOOCOM_CONSUMER_SECRET=WOOCOM_CONSUMER_SECRET:latest,STRIPE_SECRET_KEY=STRIPE_SECRET_KEY:latest",
+        "--set-env-vars",
+        "NEXT_PUBLIC_BACKEND_URL=${_NEXT_PUBLIC_BACKEND_URL},NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${_NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}",
+        "--memory",
+        "1Gi",
+        "--max-instances",
+        "1",
+      ]
+
+# 🔐 Map Secret Manager versions to Environment Variables for Step 1
+availableSecrets:
+  secretManager:
+    - versionName: projects/$PROJECT_ID/secrets/WOOCOM_CONSUMER_KEY/versions/latest
+      env: "WOOCOM_CONSUMER_KEY"
+    - versionName: projects/$PROJECT_ID/secrets/WOOCOM_CONSUMER_SECRET/versions/latest
+      env: "WOOCOM_CONSUMER_SECRET"
+    - versionName: projects/$PROJECT_ID/secrets/STRIPE_SECRET_KEY/versions/latest
+      env: "STRIPE_SECRET_KEY"

@@ -1,0 +1,7 @@
+{
+  "valid_slugs": ["aqualand-marina"],
+  "valid_coupon_codes_by_slug": {
+    "aqualand-marina": "aham10"
+  },
+  "notes": "Manually maintained. Update when new dealer pages are added in WP. These are stable test fixtures — never delete from WP without coordinating with the testing team."
+}

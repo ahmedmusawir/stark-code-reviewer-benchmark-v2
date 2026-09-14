@@ -1,0 +1,8 @@
+# Playwright test outputs (regenerated each run)
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Live fixtures (regenerated per environment via npm run fixtures:fetch)
+fixtures/live-data.json

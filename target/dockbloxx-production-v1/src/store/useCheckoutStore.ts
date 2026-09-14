@@ -1,0 +1,409 @@
+import { create } from "zustand";
+import { CheckoutData } from "@/types/checkout";
+import { Coupon } from "@/types/coupon";
+import { CartItem } from "@/types/cart";
+import { persist, createJSONStorage, PersistOptions } from "zustand/middleware";
+import type { StateCreator } from "zustand";
+// Import our new utility
+import { updateCheckoutTotals } from "@/lib/checkoutUtils";
+
+import {
+  applyCoupon,
+  calculateCouponDiscount,
+  validateCoupon,
+  validateCouponForDealer,
+} from "@/lib/couponUtils";
+
+interface CheckoutStore {
+  checkoutData: CheckoutData;
+  setBilling: (billing: CheckoutData["billing"]) => void;
+  setShipping: (shipping: CheckoutData["shipping"]) => void;
+  setPaymentMethod: (method: string) => void;
+  setShippingMethod: (
+    method: "flat_rate" | "free_shipping" | "local_pickup",
+    cost: number
+  ) => void;
+  setCartItems: (items: CartItem[]) => void;
+  setCoupon: (coupon: CheckoutData["coupon"]) => void;
+  calculateTotals: () => void;
+  resetCheckout: () => void;
+  applyCoupon: (coupon: Coupon) => void;
+  applyCouponForDealer: (coupon: Coupon) => void;
+  removeCoupon: () => void;
+  billingSameAsShipping: boolean; // Default: billing is same as shipping
+  setBillingSameAsShipping: (value: boolean) => void;
+  orderValidated: boolean; // NEW: Tracks if order details are complete/validated
+  setOrderValidated: (value: boolean) => void; // NEW: Function to update the orderValidated flag
+  paymentIntentClientSecret: string; // NEW: Stores the PaymentIntent client secret
+  setPaymentIntentClientSecret: (clientSecret: string) => void; // NEW: Setter function
+  clearPaymentIntent: () => void; // NEW: Function to clear the PaymentIntent client secret
+  orderId: number | null;
+  setOrderId: (id: number) => void;
+  emailSaved: boolean;
+  setEmailSaved: (value: boolean) => void;
+  isAnyBlockEditing: boolean;
+  setIsAnyBlockEditing: (value: boolean) => void;
+  enableRegistration: boolean; // NEW: Tracks if user wants to register an account
+  setEnableRegistration: (value: boolean) => void; // NEW: Setter function for enableRegistration
+  isHydrated: boolean;
+  setIsHydrated: (value: boolean) => void;
+  customerNote: string;
+  setCustomerNote: (note: string) => void;
+}
+
+type CheckoutPersist = (
+  config: StateCreator<CheckoutStore>,
+  options: PersistOptions<CheckoutStore>
+) => StateCreator<CheckoutStore>;
+
+export const useCheckoutStore = create<CheckoutStore>()(
+  persist(
+    (set, get) => ({
+      isHydrated: false,
+      setIsHydrated: (value: boolean) => set(() => ({ isHydrated: value })),
+      enableRegistration: true, // Default: Registration is enabled
+      setEnableRegistration: (value: boolean) =>
+        set({ enableRegistration: value }),
+      orderId: null,
+      setOrderId: (id) => set({ orderId: id }),
+      paymentIntentClientSecret: "", // Initially empty
+      billingSameAsShipping: true, // Default: billing is same as shipping
+      orderValidated: false, // NEW: Initially, order is not validated
+      customerNote: "",
+
+      setCustomerNote: (note: string) =>
+        set((state) => ({
+          checkoutData: {
+            ...state.checkoutData,
+            customerNote: note,
+          },
+        })),
+
+      checkoutData: {
+        billing: {
+          first_name: "",
+          last_name: "",
+          address_1: "",
+          address_2: "",
+          city: "",
+          state: "",
+          postcode: "",
+          country: "US",
+          email: "",
+          phone: "",
+        },
+        shipping: {
+          first_name: "",
+          last_name: "",
+          address_1: "",
+          address_2: "",
+          city: "",
+          state: "",
+          postcode: "",
+          country: "US",
+          email: "",
+          phone: "",
+        },
+        paymentMethod: "stripe",
+        shippingMethod: "flat_rate",
+        shippingCost: 0,
+        cartItems: [],
+        coupon: null,
+        subtotal: 0,
+        taxTotal: 0,
+        discountTotal: 0,
+        total: 0,
+        customerNote: "",
+      },
+
+      // NEW: Setter for PaymentIntent client secret
+      setPaymentIntentClientSecret: (clientSecret: string) =>
+        set(() => ({ paymentIntentClientSecret: clientSecret })),
+
+      // NEW: Function to clear the PaymentIntent client secret
+      clearPaymentIntent: () => set(() => ({ paymentIntentClientSecret: "" })),
+
+      setBillingSameAsShipping: (value: boolean) =>
+        set(() => ({ billingSameAsShipping: value })),
+
+      // Set Billing Address
+      setBilling: (billing) =>
+        set((state) => ({ checkoutData: { ...state.checkoutData, billing } })),
+
+      // Set Shipping Address
+      setShipping: (shipping) =>
+        set((state) => ({ checkoutData: { ...state.checkoutData, shipping } })),
+
+      // Set Payment Method
+      setPaymentMethod: (method) =>
+        set((state) => ({
+          checkoutData: { ...state.checkoutData, paymentMethod: method },
+        })),
+
+      // Set Shipping Method & Cost
+      setShippingMethod: (method, cost) => {
+        // Don't override if there's a free shipping coupon
+        const currentState = get();
+        if (currentState.checkoutData.coupon?.free_shipping) {
+          console.log(
+            "Preventing shipping method change due to free shipping coupon"
+          );
+          return;
+        }
+
+        // 1) Update shipping cost in store
+        set((state) => ({
+          checkoutData: {
+            ...state.checkoutData,
+            shippingMethod: method,
+            shippingCost: cost,
+          },
+        }));
+
+        // 2) Immediately run calculateTotals
+        get().calculateTotals();
+
+        console.log("[setShippingMethod] => ", method, cost);
+      },
+
+      /**
+       * 1) When we setCartItems, we just store them in state,
+       *    then re-run updateCheckoutTotals immediately.
+       */
+      setCartItems: (items) => {
+        set((state) => {
+          const updatedCheckoutData = {
+            ...state.checkoutData,
+            cartItems: items,
+          };
+          // Now recalc everything
+          const newTotals = updateCheckoutTotals(updatedCheckoutData);
+          return { checkoutData: newTotals };
+        });
+      },
+
+      // Set Coupon Data
+      setCoupon: (coupon) =>
+        set((state) => {
+          // Simply store the coupon as-is, without overwriting discountTotal
+          const updatedCheckoutData = {
+            ...state.checkoutData,
+            coupon,
+          };
+          // Recalculate totals based on the new coupon and current cart items
+          const newTotals = updateCheckoutTotals(updatedCheckoutData);
+          return { checkoutData: newTotals };
+        }),
+
+      // Calculate Totals
+      calculateTotals: () =>
+        set((state) => ({
+          // funnel every re-calculation through our single source of truth
+          checkoutData: updateCheckoutTotals(state.checkoutData),
+        })),
+
+      // Apply Coupon Zustand Function
+
+      /**
+       * 2) Apply a coupon:
+       *    - Validate the coupon
+       *    - If valid, store it in checkoutData.coupon (unchanged)
+       *    - Then recalc totals using updateCheckoutTotals
+       */
+      applyCoupon: (coupon) => {
+        const { checkoutData } = get();
+
+        console.log("Before applying coupon:", get().checkoutData.coupon);
+
+        const { isValid, message } = validateCoupon(coupon, checkoutData);
+        if (!isValid) {
+          console.warn("Invalid coupon:", message);
+          // Optionally set some error state, or do nothing
+          return;
+        }
+
+        // Store the coupon as-is, do NOT override coupon.discount_value
+        const updatedCheckoutData = {
+          ...checkoutData,
+          coupon,
+        };
+
+        // Recalculate totals with the newly applied coupon
+        const newTotals = updateCheckoutTotals(updatedCheckoutData);
+
+        // Update Zustand store
+        set({ checkoutData: newTotals });
+
+        console.log("After applying coupon:", get().checkoutData.coupon);
+      },
+
+      /**
+       * Apply a coupon from the dealer landing page (lenient — skips the
+       * email/zip/allow-list/per-user-limit checks because those data points
+       * are not yet entered at landing time). Same success/failure shape
+       * as applyCoupon. The full applyCoupon still gates checkout.
+       */
+      applyCouponForDealer: (coupon) => {
+        const { checkoutData } = get();
+
+        console.log(
+          "Before applying dealer coupon:",
+          get().checkoutData.coupon
+        );
+
+        const { isValid, message } = validateCouponForDealer(
+          coupon,
+          checkoutData
+        );
+        if (!isValid) {
+          console.warn("Invalid dealer coupon:", message);
+          return;
+        }
+
+        const updatedCheckoutData = {
+          ...checkoutData,
+          coupon,
+        };
+
+        const newTotals = updateCheckoutTotals(updatedCheckoutData);
+
+        set({ checkoutData: newTotals });
+
+        console.log(
+          "After applying dealer coupon:",
+          get().checkoutData.coupon
+        );
+      },
+
+      // removeCoupon: () =>
+      //   set((state) => {
+      //     // Create an updated checkout data object with the coupon removed.
+      //     const updatedCheckoutData = {
+      //       ...state.checkoutData,
+      //       coupon: null,
+      //     };
+
+      //     // Recalculate everything using our single source of truth.
+      //     const newTotals = updateCheckoutTotals(updatedCheckoutData);
+
+      //     return { checkoutData: newTotals };
+      //   }),
+
+      removeCoupon: () =>
+        set((state) => {
+          console.log("🗑️ [removeCoupon] BEFORE removal:", {
+            coupon: state.checkoutData.coupon,
+            shippingCost: state.checkoutData.shippingCost,
+            shippingMethod: state.checkoutData.shippingMethod,
+            subtotal: state.checkoutData.subtotal,
+            total: state.checkoutData.total,
+          });
+
+          // Create an updated checkout data object with the coupon removed.
+          const updatedCheckoutData = {
+            ...state.checkoutData,
+            coupon: null,
+          };
+
+          console.log(
+            "🗑️ [removeCoupon] After setting coupon to null:",
+            updatedCheckoutData
+          );
+
+          // Recalculate everything using our single source of truth.
+          const newTotals = updateCheckoutTotals(updatedCheckoutData);
+
+          console.log("🗑️ [removeCoupon] AFTER recalculation:", {
+            coupon: newTotals.coupon,
+            shippingCost: newTotals.shippingCost,
+            shippingMethod: newTotals.shippingMethod,
+            subtotal: newTotals.subtotal,
+            total: newTotals.total,
+          });
+
+          return { checkoutData: newTotals };
+        }),
+
+      // Reset Checkout (After Order is Placed)
+      resetCheckout: () =>
+        set({
+          checkoutData: {
+            billing: {
+              first_name: "",
+              last_name: "",
+              address_1: "",
+              address_2: "",
+              city: "",
+              state: "",
+              postcode: "",
+              country: "",
+              email: "",
+              phone: "",
+            },
+            shipping: {
+              first_name: "",
+              last_name: "",
+              address_1: "",
+              address_2: "",
+              city: "",
+              state: "",
+              postcode: "",
+              country: "",
+              email: "",
+              phone: "",
+            },
+            paymentMethod: "stripe",
+            shippingMethod: "flat_rate",
+            shippingCost: 0,
+            cartItems: [],
+            coupon: null,
+            subtotal: 0,
+            taxTotal: 0,
+            discountTotal: 0,
+            total: 0,
+            customerNote: "",
+          },
+        }),
+      // NEW: Setter for orderValidated
+      setOrderValidated: (value: boolean) =>
+        set(() => ({ orderValidated: value })),
+
+      // NEW: emailSaved boolean
+      emailSaved: false,
+
+      // NEW: setter function
+      setEmailSaved: (value: boolean) => set(() => ({ emailSaved: value })),
+
+      // NEW: Initialize isAnyBlockEditing to false
+      isAnyBlockEditing: false,
+      setIsAnyBlockEditing: (value: boolean) =>
+        set(() => ({ isAnyBlockEditing: value })),
+
+      // ... END OF (set, get)
+    }),
+    {
+      name: "checkout-storage",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        checkoutData: state.checkoutData,
+        billingSameAsShipping: state.billingSameAsShipping,
+        orderValidated: state.orderValidated,
+        paymentIntentClientSecret: state.paymentIntentClientSecret, // Persist the PaymentIntent secret
+        emailSaved: state.emailSaved, // Persist the emailSaved flag
+      }),
+      // 🔥 NEW: Fix shipping cost during rehydration
+      onRehydrateStorage: () => (store, error) => {
+        console.log("Rehydration callback fired");
+        if (error) {
+          console.error("Error:", error);
+        }
+        store?.setIsHydrated(true);
+        console.log("store?.isHydrated after set?", store?.isHydrated);
+      },
+    }
+  )
+);
+
+// Export the persist object for onFinishHydration usage
+export const checkoutStorePersist: CheckoutPersist = (useCheckoutStore as any)
+  .persist;
