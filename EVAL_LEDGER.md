@@ -15,3 +15,14 @@ Maintained by the evidence custodian as benchmark stages are executed and frozen
 | Safety | TARGET_SAFETY_CHECK.md | PASS | — | 2026-09-15. No blocking benchmark-distribution issue. |
 | Provenance | SPECIMEN_PROVENANCE.md | CERTIFIED | 059ccdba8174cf9c11628002387a9676b1785287 | 2026-09-15. Target identical to pinned source commit excluding `.git`. |
 | Freeze | TARGET_MANIFEST.sha256 | VERIFIED | e812f09142a3f66eb726d1719ff01c6629c84534da24e2bf58856ccd7382b0ea | 2026-09-15. 362/362 SHA-256 entries OK. C-locale sorted, repo-relative paths, no duplicates. |
+| Specimen Freeze | DockBloxx target @ 059ccdba | COMPLETE | Manifest e812f09142a3f66eb726d1719ff01c6629c84534da24e2bf58856ccd7382b0ea | 2026-09-15. Provenance CERTIFIED, safety PASS, 362/362 OK. |
+| Instrument Freeze | BENCHMARK_BRIEF.md | FROZEN | a14a36fd4a17c3b60048c744f0ee5d3e20fc7979168d79bf749752a377586f30 | 2026-09-15. Benchmark question, roles, pipeline. |
+| Instrument Freeze | BENCHMARK_RULES.md | FROZEN | 7cd16c7459bfd0e228d3ea8bbbbc1700d39f03345bc4dfbe59ae09443422ef99 | 2026-09-15. Rules R1–R16. |
+| Instrument Freeze | RUN_ORDER.md | FROZEN | d5aee83c9fbfb7bd0b8d98a7fe2ae1971c4bb65c8fc86e01404a61cbe337fb1a | 2026-09-15. Seeded first wave: Fable 5.1, GLM 5.3 Flash, GLM 5.3. Astra deferred fourth (availability, disclosed). |
+| Instrument Freeze | EVAL_SCORECARD.md | FROZEN | 3931f16aaedfedf527b8b910971d8a60394c81f10a20036d82bbc0f3043ab177 | 2026-09-15. 12 dimensions, 100 points, raw 0–5 ratings. Withheld from contestants. |
+| Instrument Freeze | MODEL_MANIFEST.md | FROZEN FORMAT | 3a129e8f84225df90a8783becd2275f9ee9a1c60ad439b9a5d8fb3248b9c5970 | 2026-09-15. Runtime values TBD until each run. This file's hash will change when runtime values are recorded. |
+| Instrument Freeze | templates/CONTESTANT_PROMPT.md | FROZEN | 6f09dd6d4fb619d59865702b2d69fe3190d98f50e843d1159c9afac21f474a95 | 2026-09-15. Identical raw prompt, no rubric, no target-specific hints. |
+| Instrument Freeze | templates/RUN_NOTES_TEMPLATE.md | FROZEN | b60bb35dbaf6f1bb45df556ce1f3857f56e95d9f0a150114b211db377de6991b | 2026-09-15. |
+| Instrument Freeze | templates/CONTESTANT_CLOSEOUT_TEMPLATE.md | FROZEN | 08a34ead6e6e63dfea13fbbce813bc4d301cbc60e7185806aefaee73b06c947f | 2026-09-15. |
+| Instrument Freeze | templates/REFEREE_PROMPT.md | FROZEN | caaef47ab98652260e4d3ea26213e11ddea54c245f053e92a32c69ae72eccc87 | 2026-09-15. Sol blind methodology. |
+| Instrument Freeze | Benchmark instrument | COMPLETE | — | 2026-09-15. No contestant has started. |

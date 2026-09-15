@@ -1,41 +1,48 @@
 # CR-BENCH-02 — Model Manifest
 
-**Status:** SCAFFOLD / NOT POPULATED
+**Status:** FROZEN FORMAT / RUNTIME VALUES PENDING — 2026-09-15
 
-Populated by Tony at contestant run time. No identifiers are guessed here.
+**Visibility:** Withheld from contestants, Sol, and Jarvis until reveal.
+
+Runtime-specific values are recorded at or immediately after each contestant run from evidence observed in the session or provider interface. Values that cannot be proven are left TBD or recorded as NOT OBSERVABLE. Model identifiers are never guessed.
 
 ## Astra
 
-- Exact model identifier: TBD
+- Benchmark name: Astra
+- Exact runtime/model identifier: TBD
 - Provider/interface: TBD
 - Reasoning/configuration: TBD
 - Vision capability: TBD
 - Run date: TBD
-- Operational measurement available: TBD
+- Operational usage measurement: TBD
+- Scheduling note: deferred fourth run due to availability (see `RUN_ORDER.md`)
 
 ## Fable 5.1
 
-- Exact model identifier: TBD
+- Benchmark name: Fable 5.1
+- Exact runtime/model identifier: TBD
 - Provider/interface: TBD
 - Reasoning/configuration: TBD
 - Vision capability: TBD
 - Run date: TBD
-- Operational measurement available: TBD
+- Operational usage measurement: TBD
 
 ## GLM 5.3
 
-- Exact model identifier: TBD
+- Benchmark name: GLM 5.3
+- Exact runtime/model identifier: TBD
 - Provider/interface: TBD
 - Reasoning/configuration: TBD
 - Vision capability: TBD
 - Run date: TBD
-- Operational measurement available: TBD
+- Operational usage measurement: TBD
 
 ## GLM 5.3 Flash
 
-- Exact model identifier: TBD
+- Benchmark name: GLM 5.3 Flash
+- Exact runtime/model identifier: TBD
 - Provider/interface: TBD
 - Reasoning/configuration: TBD
 - Vision capability: TBD
 - Run date: TBD
-- Operational measurement available: TBD
+- Operational usage measurement: TBD
