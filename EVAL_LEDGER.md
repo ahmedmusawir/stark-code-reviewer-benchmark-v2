@@ -26,3 +26,7 @@ Maintained by the evidence custodian as benchmark stages are executed and frozen
 | Instrument Freeze | templates/CONTESTANT_CLOSEOUT_TEMPLATE.md | FROZEN | 08a34ead6e6e63dfea13fbbce813bc4d301cbc60e7185806aefaee73b06c947f | 2026-09-15. |
 | Instrument Freeze | templates/REFEREE_PROMPT.md | FROZEN | caaef47ab98652260e4d3ea26213e11ddea54c245f053e92a32c69ae72eccc87 | 2026-09-15. Sol blind methodology. |
 | Instrument Freeze | Benchmark instrument | COMPLETE | — | 2026-09-15. No contestant has started. |
+| Run 1 — Fable 5.1 | contestants/fable-5.1/REVIEW_REPORT.md | COMPLETE / FROZEN | 5c37091b7ff9e2d2691b33dac41f3fd6821ae76370c1deda90031fd7423b670d | 2026-09-15. 35003 bytes, 305 lines. Model `claude-fable-5-1` self-reported. No scoring performed. |
+| Run 1 — Fable 5.1 | Target verification | PASS | Manifest e812f09142a3f66eb726d1719ff01c6629c84534da24e2bf58856ccd7382b0ea | 2026-09-15. 362/362 OK, 0 failures, 362 regular files. |
+| Run 1 — Fable 5.1 | Protocol deviation | ACCEPTED — NON-CONTAMINATING | — | Unrecorded Git history command. Director/Jarvis ruling: KEEP RUN 1 — NO RERUN. Custodian note: preserved report does not contain the string `git log`. Referred to Tony. |
+| Run 1 — Fable 5.1 | contestants/fable-5.1/RUN_NOTES.md | CLOSED | — | Custodian closeout appended. Run executed in the benchmark repo root, not an isolated workspace copy (R1). |
